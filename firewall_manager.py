@@ -71,32 +71,49 @@ def get_current_firewall_rules(firewall_id, headers):
     except requests.RequestException as e:
         logging.error(f"Failed to fetch firewall rules: {e}")
         exit(1)
-
 def update_firewall_rules(firewall_id, headers, rules):
     """
     Updates the firewall rules on Hetzner Cloud.
-    
+
     Args:
         firewall_id (str): The ID of the firewall to update.
         headers (dict): The headers containing the authorization token.
         rules (list): The list of updated firewall rules.
-    
+
     Returns:
         bool: True if the update was successful, False otherwise.
     """
     api_url = f"https://api.hetzner.cloud/v1/firewalls/{firewall_id}/actions/set_rules"
     data = {"rules": rules}
     logging.debug(f"POST {api_url} with headers {headers} and data {data}")
-    
+
     try:
         response = requests.post(api_url, headers=headers, json=data)
         response.raise_for_status()
-        logging.debug(f"Response JSON: {response.json()}")
-        logging.info("The firewall rules have been successfully updated.")
-        return True
+        response_json = response.json()
+        logging.debug(f"Response JSON: {response_json}")
+
+        # Check actions status
+        actions = response_json.get('actions', [])
+        all_success = True
+        for action in actions:
+            if action.get('status') != 'success':
+                all_success = False
+                logging.error(f"Action failed: {action.get('command')}. Error: {action.get('error')}")
+        
+        if all_success:
+            logging.info("The firewall rules have been successfully updated.")
+            return True
+        else:
+            logging.error("Failed to update firewall rules. Some actions did not succeed.")
+            return False
+            
     except requests.RequestException as e:
         logging.error(f"Failed to update firewall rules: {e}")
+        if response.content:
+            logging.error(f"Response content: {response.content.decode()}")
         return False
+
 
 def send_email_notification(subject, body, to_email):
     """
