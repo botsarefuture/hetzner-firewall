@@ -118,6 +118,9 @@ def update_firewall_rules(firewall_id, headers, rules):
 
     try:
         response = requests.post(api_url, headers=headers, json=data)
+        if response.status_code == 200:
+            return True
+        
         response.raise_for_status()  # Raises HTTPError for bad responses
         response_json = response.json()
         logging.debug(f"Response JSON: {response_json}")
