@@ -296,7 +296,7 @@ def main():
     new_rule = {
         "direction": "in",
         "source_ips": [cidr_ip],
-        "port": "any",
+        "port": "22017",
         "protocol": "tcp"
     }
     current_rules.append(new_rule)
