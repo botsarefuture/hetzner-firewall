@@ -66,62 +66,6 @@ def get_current_firewall_rules(firewall_id, headers):
         logging.error(f"Uh-oh! Failed to fetch firewall rules: {e}. No worries, we'll get it sorted!")
         exit(1)
 
-def backup_firewall_rules(firewall_id, headers):
-    """
-    Backs up the current firewall rules to a local file.
-    
-    Args:
-        firewall_id (str): The ID of the firewall to back up.
-        headers (dict): The headers containing the authorization token.
-    """
-    current_rules = get_current_firewall_rules(firewall_id, headers)
-    backup_file = f"firewall_backup_{firewall_id}.json"
-    with open(backup_file, 'w') as f:
-        json.dump(current_rules, f, indent=4)
-    logging.info(f"Backup created: {backup_file}")
-
-def restore_firewall_rules(firewall_id, headers):
-    """
-    Restores the firewall rules from a backup file.
-    
-    Args:
-        firewall_id (str): The ID of the firewall to restore.
-        headers (dict): The headers containing the authorization token.
-    """
-    backup_file = f"firewall_backup_{firewall_id}.json"
-    if os.path.exists(backup_file):
-        with open(backup_file, 'r') as f:
-            rules = json.load(f)
-        if update_firewall_rules(firewall_id, headers, rules):
-            logging.info("Firewall rules successfully restored from backup.")
-        else:
-            logging.error("Failed to restore firewall rules from backup.")
-    else:
-        logging.error("No backup found to restore from.")
-
-def whitelist_ips_from_file(file_path, current_rules):
-    """
-    Adds IP addresses from a file to the whitelist in the firewall rules.
-    
-    Args:
-        file_path (str): The path to the file containing IP addresses.
-        current_rules (list): The current firewall rules.
-    """
-    if os.path.exists(file_path):
-        with open(file_path, 'r') as f:
-            ips = f.read().splitlines()
-        for ip in ips:
-            new_rule = {
-                "direction": "in",
-                "source_ips": [f"{ip}/32"],
-                "port": "any",
-                "protocol": "tcp"
-            }
-            current_rules.append(new_rule)
-        logging.info(f"Successfully whitelisted IPs from {file_path}.")
-    else:
-        logging.error(f"IP whitelist file {file_path} not found.")
-
 def update_firewall_rules(firewall_id, headers, rules):
     """
     Updates the firewall rules on Hetzner Cloud.
@@ -250,9 +194,6 @@ def main():
         "Content-Type": "application/json"
     }
 
-    # Backup current firewall rules before making changes
-    backup_firewall_rules(firewall_id, headers)
-    
     # Get the current public IP and convert it to CIDR notation
     my_ip_address = get_my_ipv4()
     cidr_ip = f"{my_ip_address}/32"
