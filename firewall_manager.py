@@ -128,8 +128,13 @@ def update_firewall_rules(firewall_id, headers, rules):
         for action in actions:
             if action.get('status') != 'success':
                 all_success = False
-                error_message = action.get('error', {})
-                logging.error(f"Action failed: {action.get('command')}. Error: {error_message.get('message', 'No error message provided')}")
+                error_message = action.get('error')
+                # Safely access error message
+                if error_message:
+                    error_msg = error_message.get('message', 'No error message provided')
+                else:
+                    error_msg = 'No error details available'
+                logging.error(f"Action failed: {action.get('command')}. Error: {error_msg}")
 
         if all_success:
             logging.info("The firewall rules have been successfully updated.")
@@ -144,7 +149,6 @@ def update_firewall_rules(firewall_id, headers, rules):
         if 'response' in locals() and response.content:
             logging.error(f"Response content: {response.content.decode()}")
         return False
-
 
 
 def send_email_notification(subject, body, to_email):
