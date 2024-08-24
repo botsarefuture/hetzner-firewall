@@ -70,7 +70,30 @@ def get_current_firewall_rules(firewall_id, headers):
         return rules
     except requests.RequestException as e:
         logging.error(f"Failed to fetch firewall rules: {e}")
-        exit(1)
+        exit(1)def remove_duplicate_rules(rules):
+    """
+    Removes duplicate rules from the list of firewall rules.
+
+    Args:
+        rules (list): The list of firewall rules.
+
+    Returns:
+        list: The list of rules with duplicates removed.
+    """
+    seen_rules = set()
+    unique_rules = []
+    for rule in rules:
+        rule_tuple = (
+            rule.get('direction'),
+            rule.get('port'),
+            rule.get('protocol'),
+            tuple(rule.get('source_ips', []))
+        )
+        if rule_tuple not in seen_rules:
+            seen_rules.add(rule_tuple)
+            unique_rules.append(rule)
+    return unique_rules
+
 def update_firewall_rules(firewall_id, headers, rules):
     """
     Updates the firewall rules on Hetzner Cloud.
@@ -84,12 +107,16 @@ def update_firewall_rules(firewall_id, headers, rules):
         bool: True if the update was successful, False otherwise.
     """
     api_url = f"https://api.hetzner.cloud/v1/firewalls/{firewall_id}/actions/set_rules"
+    
+    # Remove duplicates before sending the request
+    rules = remove_duplicate_rules(rules)
+    
     data = {"rules": rules}
     logging.debug(f"POST {api_url} with headers {headers} and data {data}")
 
     try:
         response = requests.post(api_url, headers=headers, json=data)
-        response.raise_for_status()
+        response.raise_for_status()  # Raises HTTPError for bad responses
         response_json = response.json()
         logging.debug(f"Response JSON: {response_json}")
 
@@ -99,20 +126,23 @@ def update_firewall_rules(firewall_id, headers, rules):
         for action in actions:
             if action.get('status') != 'success':
                 all_success = False
-                logging.error(f"Action failed: {action.get('command')}. Error: {action.get('error')}")
-        
+                error_message = action.get('error', {})
+                logging.error(f"Action failed: {action.get('command')}. Error: {error_message.get('message', 'No error message provided')}")
+
         if all_success:
             logging.info("The firewall rules have been successfully updated.")
             return True
         else:
             logging.error("Failed to update firewall rules. Some actions did not succeed.")
             return False
-            
+
     except requests.RequestException as e:
+        # Handle cases where the request fails
         logging.error(f"Failed to update firewall rules: {e}")
-        if response.content:
+        if 'response' in locals() and response.content:
             logging.error(f"Response content: {response.content.decode()}")
         return False
+
 
 
 def send_email_notification(subject, body, to_email):
