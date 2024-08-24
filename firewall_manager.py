@@ -26,7 +26,7 @@ def load_env_vars(filepath):
 load_env_vars('.env')
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_my_ipv4():
     """
