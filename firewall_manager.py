@@ -1,7 +1,6 @@
 import os
 import requests
 import logging
-import json
 import smtplib
 from email.mime.text import MIMEText
 
@@ -194,6 +193,16 @@ def remove_ip_rule(rules, ip_to_remove):
     updated_rules = [rule for rule in rules if ip_to_remove not in rule.get('source_ips', [])]
     logging.debug(f"Removed IP {ip_to_remove} from rules. Updated rules: {updated_rules}")
     return updated_rules
+
+def restore_firewall_rules(firewall_id, headers):
+    """
+    Placeholder function for restoring firewall rules if an update fails.
+    
+    Args:
+        firewall_id (str): The ID of the firewall to restore.
+        headers (dict): The headers containing the authorization token.
+    """
+    logging.error("Restoring previous firewall rules is not implemented.")
 
 def main():
     # Load API token and firewall ID from environment variables
