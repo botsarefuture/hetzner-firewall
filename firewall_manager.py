@@ -2,13 +2,28 @@ import os
 import requests
 import logging
 import json
-import time
-from dotenv import load_dotenv
-from email.mime.text import MIMEText
 import smtplib
+from email.mime.text import MIMEText
+
+# Function to load environment variables from a .env file
+def load_env_vars(filepath):
+    """Load environment variables from a .env file."""
+    if not os.path.isfile(filepath):
+        raise FileNotFoundError(f"The .env file {filepath} does not exist.")
+    
+    with open(filepath) as file:
+        for line in file:
+            # Strip comments and blank lines
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            
+            # Split on '=' and strip extra spaces
+            key, value = map(str.strip, line.split('=', 1))
+            os.environ[key] = value
 
 # Load environment variables from .env file
-load_dotenv()
+load_env_vars('.env')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
