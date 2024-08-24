@@ -61,6 +61,7 @@ def get_current_firewall_rules(firewall_id, headers):
         response.raise_for_status()
         rules = response.json().get('firewall', {}).get('rules', [])
         logging.info(f"Good news! Retrieved {len(rules)} firewall rules to work with.")
+        logging.debug(f"Good meow! Rules:\n{rules}")
         return rules
     except requests.RequestException as e:
         logging.error(f"Uh-oh! Failed to fetch firewall rules: {e}. No worries, we'll get it sorted!")
