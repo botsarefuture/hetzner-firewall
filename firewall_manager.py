@@ -118,7 +118,7 @@ def send_email_notification(subject, body, to_email):
 
     try:
         logging.debug(f"Sending email to {to_email} from {from_email} with subject {subject}")
-        with smtplib.SMTP_SSL("smtp.your-email-provider.com", 465) as server:
+        with smtplib.SMTP_SSL("mail3.luova.club", 465) as server:
             server.login(from_email, password)
             server.sendmail(from_email, to_email, msg.as_string())
         logging.info(f"Notification email sent to {to_email}.")
