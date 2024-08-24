@@ -70,7 +70,9 @@ def get_current_firewall_rules(firewall_id, headers):
         return rules
     except requests.RequestException as e:
         logging.error(f"Failed to fetch firewall rules: {e}")
-        exit(1)def remove_duplicate_rules(rules):
+        exit(1)
+        
+def remove_duplicate_rules(rules):
     """
     Removes duplicate rules from the list of firewall rules.
 
