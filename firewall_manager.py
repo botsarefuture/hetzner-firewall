@@ -86,6 +86,7 @@ def update_firewall_rules(firewall_id, headers, rules):
         response.raise_for_status()
         logging.info("Hooray! The firewall rules have been successfully updated. Your connection is safe and sound!")
         return True
+    
     except requests.RequestException as e:
         logging.error(f"Oh no! Something went wrong while updating the firewall: {e}. Don't worry, we're in this together!")
         return False
