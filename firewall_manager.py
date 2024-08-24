@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 def load_env_vars(filepath):
     """Load environment variables from a .env file."""
     if not os.path.isfile(filepath):
+        logging.critical(f"The .env file {filepath} does not exist.")
         raise FileNotFoundError(f"The .env file {filepath} does not exist.")
     
     with open(filepath) as file:
@@ -21,6 +22,7 @@ def load_env_vars(filepath):
             # Split on '=' and strip extra spaces
             key, value = map(str.strip, line.split('=', 1))
             os.environ[key] = value
+            logging.debug(f"Loaded environment variable: {key}={value}")
 
 # Load environment variables from .env file
 load_env_vars('.env')
@@ -37,12 +39,14 @@ def get_my_ipv4():
     """
     try:
         response = requests.get("https://api.ipify.org?format=json")
+        logging.debug(f"GET https://api.ipify.org?format=json")
         response.raise_for_status()
         ip_address = response.json().get("ip")
-        logging.info(f"Yay! Successfully retrieved your public IP address: {ip_address}.")
+        logging.debug(f"Response JSON: {response.json()}")
+        logging.info(f"Successfully retrieved your public IP address: {ip_address}.")
         return ip_address
     except requests.RequestException as e:
-        logging.error(f"Oops! Something went wrong while fetching your IP address: {e}. Let's try again later!")
+        logging.error(f"Failed to fetch IP address: {e}")
         exit(1)
 
 def get_current_firewall_rules(firewall_id, headers):
@@ -57,14 +61,16 @@ def get_current_firewall_rules(firewall_id, headers):
         list: A list of current firewall rules.
     """
     try:
-        response = requests.get(f"https://api.hetzner.cloud/v1/firewalls/{firewall_id}", headers=headers)
+        url = f"https://api.hetzner.cloud/v1/firewalls/{firewall_id}"
+        logging.debug(f"GET {url} with headers {headers}")
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
         rules = response.json().get('firewall', {}).get('rules', [])
-        logging.info(f"Good news! Retrieved {len(rules)} firewall rules to work with.")
-        logging.debug(f"Good meow! Rules:\n{rules}")
+        logging.debug(f"Response JSON: {response.json()}")
+        logging.info(f"Retrieved {len(rules)} firewall rules.")
         return rules
     except requests.RequestException as e:
-        logging.error(f"Uh-oh! Failed to fetch firewall rules: {e}. No worries, we'll get it sorted!")
+        logging.error(f"Failed to fetch firewall rules: {e}")
         exit(1)
 
 def update_firewall_rules(firewall_id, headers, rules):
@@ -81,15 +87,16 @@ def update_firewall_rules(firewall_id, headers, rules):
     """
     api_url = f"https://api.hetzner.cloud/v1/firewalls/{firewall_id}/actions/set_rules"
     data = {"rules": rules}
+    logging.debug(f"POST {api_url} with headers {headers} and data {data}")
     
     try:
         response = requests.post(api_url, headers=headers, json=data)
         response.raise_for_status()
-        logging.info("Hooray! The firewall rules have been successfully updated. Your connection is safe and sound!")
+        logging.debug(f"Response JSON: {response.json()}")
+        logging.info("The firewall rules have been successfully updated.")
         return True
-    
     except requests.RequestException as e:
-        logging.error(f"Oh no! Something went wrong while updating the firewall: {e}. Don't worry, we're in this together!")
+        logging.error(f"Failed to update firewall rules: {e}")
         return False
 
 def send_email_notification(subject, body, to_email):
@@ -110,12 +117,13 @@ def send_email_notification(subject, body, to_email):
     msg["To"] = to_email
 
     try:
+        logging.debug(f"Sending email to {to_email} from {from_email} with subject {subject}")
         with smtplib.SMTP_SSL("smtp.your-email-provider.com", 465) as server:
             server.login(from_email, password)
             server.sendmail(from_email, to_email, msg.as_string())
         logging.info(f"Notification email sent to {to_email}.")
     except Exception as e:
-        logging.error(f"Failed to send email notification: {e}.")
+        logging.error(f"Failed to send email notification: {e}")
 
 def interactive_mode(current_rules, new_rule):
     """
@@ -134,6 +142,7 @@ def interactive_mode(current_rules, new_rule):
     print("New rule to be added:")
     print(new_rule)
     confirm = input("Do you want to proceed with adding this rule? (yes/no): ")
+    logging.debug(f"User confirmation for new rule: {confirm}")
     return confirm.lower() == 'yes'
 
 def track_ip_file():
@@ -154,7 +163,10 @@ def get_last_ip():
     """
     if os.path.exists(track_ip_file()):
         with open(track_ip_file(), 'r') as f:
-            return f.read().strip()
+            last_ip = f.read().strip()
+        logging.debug(f"Last IP retrieved from file: {last_ip}")
+        return last_ip
+    logging.debug("No last IP file found.")
     return None
 
 def set_last_ip(ip_address):
@@ -166,6 +178,7 @@ def set_last_ip(ip_address):
     """
     with open(track_ip_file(), 'w') as f:
         f.write(ip_address)
+    logging.debug(f"Set last IP address in file: {ip_address}")
 
 def remove_ip_rule(rules, ip_to_remove):
     """
@@ -179,6 +192,7 @@ def remove_ip_rule(rules, ip_to_remove):
         list: The updated list of firewall rules.
     """
     updated_rules = [rule for rule in rules if ip_to_remove not in rule.get('source_ips', [])]
+    logging.debug(f"Removed IP {ip_to_remove} from rules. Updated rules: {updated_rules}")
     return updated_rules
 
 def main():
@@ -187,7 +201,7 @@ def main():
     firewall_id = os.getenv("FIREWALL_ID")
     
     if not api_token or not firewall_id:
-        logging.critical("Uh-oh! We couldn't find your API token or firewall ID. Please set them as environment variables so we can get started.")
+        logging.critical("API token or firewall ID not found in environment variables.")
         exit(1)
     
     # Define headers for Hetzner API requests
@@ -195,10 +209,12 @@ def main():
         "Authorization": f"Bearer {api_token}",
         "Content-Type": "application/json"
     }
+    logging.debug(f"API headers: {headers}")
 
     # Get the current public IP and convert it to CIDR notation
     my_ip_address = get_my_ipv4()
     cidr_ip = f"{my_ip_address}/32"
+    logging.debug(f"Current IP in CIDR notation: {cidr_ip}")
     
     # Fetch current firewall rules
     current_rules = get_current_firewall_rules(firewall_id, headers)
@@ -219,10 +235,11 @@ def main():
         "protocol": "tcp"
     }
     current_rules.append(new_rule)
+    logging.debug(f"New rule to be added: {new_rule}")
     
     # Update the firewall with the new set of rules
     if update_firewall_rules(firewall_id, headers, current_rules):
-        logging.info(f"Awesome! Your IP address ({my_ip_address}) has been successfully added to the allowed list on firewall {firewall_id}.")
+        logging.info(f"IP address ({my_ip_address}) has been successfully added to the allowed list on firewall {firewall_id}.")
         # Update the stored IP address
         set_last_ip(my_ip_address)
         # Send email notification
@@ -232,10 +249,10 @@ def main():
             os.getenv("NOTIFY_EMAIL")
         )
     else:
-        logging.error(f"Something didn't go as planned. Let's revisit the steps and try updating the firewall rules again.")
+        logging.error(f"Failed to update firewall rules. Attempting to restore previous state.")
         restore_firewall_rules(firewall_id, headers)
 
 if __name__ == "__main__":
-    logging.info("Hello, wonderful human! Let's get started with updating your firewall rules.")
+    logging.info("Starting script execution.")
     main()
-    logging.info("Thanks for using this script! You're doing great, and your firewall is all set. Take care!")
+    logging.info("Script execution completed.")
