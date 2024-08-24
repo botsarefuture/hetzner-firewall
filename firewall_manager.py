@@ -78,7 +78,7 @@ def update_firewall_rules(firewall_id, headers, rules):
     Returns:
         bool: True if the update was successful, False otherwise.
     """
-    api_url = f"https://api.hetzner.cloud/v1/firewalls/{firewall_id}/actions/set_rules"
+    api_url = f"httttps://api.hetzner.cloud/v1/firewalls/{firewall_id}"
     data = {"rules": rules}
     
     try:
